@@ -6,6 +6,7 @@ import '../../core/constants/triage_enums.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../state/language_provider.dart';
+import '../state/triage_provider.dart';
 import '../widgets/outpost_app_bar.dart';
 
 /// Screen allowing the user to select who requires clinical assessment.
@@ -13,20 +14,19 @@ import '../widgets/outpost_app_bar.dart';
 /// Corresponds to Figma frame "02 · Who needs care". Differentiates
 /// triage protocols between general adults, pediatric IMCI (infant/child),
 /// and maternal obstetric danger signs.
-class WhoForScreen extends ConsumerStatefulWidget {
+class WhoForScreen extends ConsumerWidget {
   /// Creates the [WhoForScreen].
   const WhoForScreen({super.key});
 
   @override
-  ConsumerState<WhoForScreen> createState() => _WhoForScreenState();
-}
-
-class _WhoForScreenState extends ConsumerState<WhoForScreen> {
-  ForWhom _selected = ForWhom.myself;
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final strings = ref.watch(stringsProvider);
+    final triageState = ref.watch(triageProvider);
+
+    void selectAndNavigate(ForWhom forWhom) {
+      ref.read(triageProvider.notifier).setForWhom(forWhom);
+      Navigator.of(context).pushNamed(AppRoutes.symptomIntake);
+    }
 
     return Scaffold(
       appBar: const OutpostAppBar(showBackButton: true),
@@ -53,11 +53,8 @@ class _WhoForScreenState extends ConsumerState<WhoForScreen> {
                 icon: Icons.person_outline,
                 title: strings.forMyself,
                 subtitle: 'Myself',
-                isSelected: _selected == ForWhom.myself,
-                onTap: () {
-                  setState(() => _selected = ForWhom.myself);
-                  Navigator.of(context).pushNamed(AppRoutes.symptomIntake);
-                },
+                isSelected: triageState.forWhom == ForWhom.myself,
+                onTap: () => selectAndNavigate(ForWhom.myself),
               ),
               const SizedBox(height: AppSpacing.md),
               // Option 2: Child (IMCI)
@@ -65,11 +62,8 @@ class _WhoForScreenState extends ConsumerState<WhoForScreen> {
                 icon: Icons.child_care_outlined,
                 title: strings.forChild,
                 subtitle: 'My child',
-                isSelected: _selected == ForWhom.child,
-                onTap: () {
-                  setState(() => _selected = ForWhom.child);
-                  Navigator.of(context).pushNamed(AppRoutes.symptomIntake);
-                },
+                isSelected: triageState.forWhom == ForWhom.child,
+                onTap: () => selectAndNavigate(ForWhom.child),
               ),
               const SizedBox(height: AppSpacing.md),
               // Option 3: Pregnant woman (Maternal health)
@@ -77,11 +71,8 @@ class _WhoForScreenState extends ConsumerState<WhoForScreen> {
                 icon: Icons.pregnant_woman_outlined,
                 title: strings.forPregnant,
                 subtitle: 'Pregnant woman',
-                isSelected: _selected == ForWhom.pregnant,
-                onTap: () {
-                  setState(() => _selected = ForWhom.pregnant);
-                  Navigator.of(context).pushNamed(AppRoutes.symptomIntake);
-                },
+                isSelected: triageState.forWhom == ForWhom.pregnant,
+                onTap: () => selectAndNavigate(ForWhom.pregnant),
               ),
               const Spacer(),
               // Privacy reassurance banner

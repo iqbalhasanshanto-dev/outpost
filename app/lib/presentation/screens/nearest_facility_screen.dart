@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/app_routes.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../data/assets/mock_facilities.dart';
+import '../../domain/entities/triage_models.dart';
 import '../state/language_provider.dart';
 import '../widgets/outpost_app_bar.dart';
 
@@ -18,33 +20,6 @@ class NearestFacilityScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final strings = ref.watch(stringsProvider);
-
-    final mockFacilities = [
-      (
-        name: 'মান্দা উপজেলা স্বাস্থ্য কমপ্লেক্স',
-        nameEn: 'Manda Upazila Health Complex',
-        type: strings.facilityTypeHospital,
-        distance: '১.৮ কিমি · 1.8 km',
-        phone: '০১৭XXXXXXXX',
-        hasEmergency: true,
-      ),
-      (
-        name: 'কালিকাপুর কমিউনিটি ক্লিনিক',
-        nameEn: 'Kalikapur Community Clinic',
-        type: strings.facilityTypeClinic,
-        distance: '৩.২ কিমি · 3.2 km',
-        phone: '০১৮XXXXXXXX',
-        hasEmergency: false,
-      ),
-      (
-        name: 'জনসেবা ফার্মেসি ও প্রাথমিক চিকিৎসা',
-        nameEn: 'Jonoseba Pharmacy & First Aid',
-        type: strings.facilityTypePharmacy,
-        distance: '০.৫ কিমি · 0.5 km',
-        phone: '০১৯XXXXXXXX',
-        hasEmergency: false,
-      ),
-    ];
 
     return Scaffold(
       appBar: const OutpostAppBar(showBackButton: true),
@@ -146,7 +121,7 @@ class NearestFacilityScreen extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: AppSpacing.base),
-              // Facilities list
+              // Facilities list from mock_facilities.dart
               Expanded(
                 child: ListView.separated(
                   itemCount: mockFacilities.length,
@@ -154,6 +129,14 @@ class NearestFacilityScreen extends ConsumerWidget {
                       const SizedBox(height: AppSpacing.mdCompact),
                   itemBuilder: (context, index) {
                     final item = mockFacilities[index];
+                    final isHospital = item.type == FacilityType.hospital;
+
+                    final typeLabel = switch (item.type) {
+                      FacilityType.hospital => strings.facilityTypeHospital,
+                      FacilityType.clinic => strings.facilityTypeClinic,
+                      FacilityType.pharmacy => strings.facilityTypePharmacy,
+                    };
+
                     return Container(
                       padding: const EdgeInsets.all(AppSpacing.md),
                       decoration: BoxDecoration(
@@ -166,16 +149,18 @@ class NearestFacilityScreen extends ConsumerWidget {
                           Container(
                             padding: const EdgeInsets.all(AppSpacing.mdCompact),
                             decoration: BoxDecoration(
-                              color: item.hasEmergency
+                              color: isHospital
                                   ? AppColors.emergencyRedLight
                                   : AppColors.primaryLight,
                               shape: BoxShape.circle,
                             ),
                             child: Icon(
-                              item.hasEmergency
+                              isHospital
                                   ? Icons.local_hospital
-                                  : Icons.medical_services_outlined,
-                              color: item.hasEmergency
+                                  : item.type == FacilityType.pharmacy
+                                      ? Icons.local_pharmacy_outlined
+                                      : Icons.medical_services_outlined,
+                              color: isHospital
                                   ? AppColors.emergencyRed
                                   : AppColors.primaryTeal,
                               size: 24,
@@ -187,7 +172,7 @@ class NearestFacilityScreen extends ConsumerWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  item.name,
+                                  item.nameBn,
                                   style: Theme.of(context)
                                       .textTheme
                                       .titleMedium
@@ -203,7 +188,7 @@ class NearestFacilityScreen extends ConsumerWidget {
                                 Row(
                                   children: [
                                     Text(
-                                      item.distance,
+                                      '${item.distanceKm} km · ${item.travelTimeMin} min',
                                       style: Theme.of(context)
                                           .textTheme
                                           .labelSmall
@@ -214,7 +199,7 @@ class NearestFacilityScreen extends ConsumerWidget {
                                     ),
                                     const SizedBox(width: AppSpacing.sm),
                                     Text(
-                                      '• ${item.type}',
+                                      '• $typeLabel',
                                       style: Theme.of(context)
                                           .textTheme
                                           .labelSmall,
@@ -232,7 +217,7 @@ class NearestFacilityScreen extends ConsumerWidget {
                             onPressed: () {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: Text('Dialing ${item.name}...'),
+                                  content: Text('Dialing ${item.nameEn}...'),
                                 ),
                               );
                             },

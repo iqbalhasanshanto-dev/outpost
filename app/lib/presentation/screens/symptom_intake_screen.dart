@@ -5,6 +5,7 @@ import '../../core/constants/app_routes.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../state/language_provider.dart';
+import '../state/triage_provider.dart';
 import '../widgets/outpost_app_bar.dart';
 
 /// Symptom intake and selection grid screen.
@@ -12,21 +13,15 @@ import '../widgets/outpost_app_bar.dart';
 /// Corresponds to Figma frame "03 · Symptoms". Allows clinical officers
 /// or community health workers to select primary reported symptoms either
 /// via interactive tiles or simulated voice input.
-class SymptomIntakeScreen extends ConsumerStatefulWidget {
+class SymptomIntakeScreen extends ConsumerWidget {
   /// Creates the [SymptomIntakeScreen].
   const SymptomIntakeScreen({super.key});
 
   @override
-  ConsumerState<SymptomIntakeScreen> createState() =>
-      _SymptomIntakeScreenState();
-}
-
-class _SymptomIntakeScreenState extends ConsumerState<SymptomIntakeScreen> {
-  final Set<String> _selectedSymptoms = <String>{};
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final strings = ref.watch(stringsProvider);
+    final triageState = ref.watch(triageProvider);
+    final selectedSymptoms = triageState.selectedSymptoms;
 
     final symptomsList = [
       (id: 'fever', label: strings.symptomFever, icon: Icons.thermostat_outlined),
@@ -110,17 +105,11 @@ class _SymptomIntakeScreenState extends ConsumerState<SymptomIntakeScreen> {
                   itemCount: symptomsList.length,
                   itemBuilder: (context, index) {
                     final item = symptomsList[index];
-                    final isSelected = _selectedSymptoms.contains(item.id);
+                    final isSelected = selectedSymptoms.contains(item.id);
 
                     return InkWell(
                       onTap: () {
-                        setState(() {
-                          if (isSelected) {
-                            _selectedSymptoms.remove(item.id);
-                          } else {
-                            _selectedSymptoms.add(item.id);
-                          }
-                        });
+                        ref.read(triageProvider.notifier).toggleSymptom(item.id);
                       },
                       borderRadius: AppSpacing.cardBorderRadius,
                       child: Container(

@@ -5,7 +5,9 @@ import '../../core/constants/app_routes.dart';
 import '../../core/constants/triage_enums.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../domain/triage/triage_engine.dart';
 import '../state/language_provider.dart';
+import '../state/triage_provider.dart';
 import '../widgets/outpost_app_bar.dart';
 
 /// Screen presenting the clinical urgency classification and next steps.
@@ -16,19 +18,23 @@ import '../widgets/outpost_app_bar.dart';
 /// - Includes mandatory disclaimer and direct "Call emergency" action.
 class TriageResultScreen extends ConsumerWidget {
   /// Creates the [TriageResultScreen].
-  const TriageResultScreen({
-    super.key,
-    this.level = TriageLevel.emergency,
-  });
-
-  /// The determined triage urgency tier. Defaults to [TriageLevel.emergency] for fail-safe prototype.
-  final TriageLevel level;
+  const TriageResultScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final strings = ref.watch(stringsProvider);
+    final activeLanguage = ref.watch(languageProvider);
+    final triageState = ref.watch(triageProvider);
 
-    final (badgeBg, badgeFg, levelTitle, levelSub) = switch (level) {
+    // If result was not pre-computed, evaluate on the fly safely
+    final result = triageState.result ??
+        const TriageEngine().evaluate(
+          forWhom: triageState.forWhom,
+          symptoms: triageState.selectedSymptoms,
+          answers: triageState.followUpAnswers,
+        );
+
+    final (badgeBg, badgeFg, levelTitle, levelSub) = switch (result.level) {
       TriageLevel.emergency => (
           AppColors.emergencyRedLight,
           AppColors.emergencyRed,
@@ -49,10 +55,13 @@ class TriageResultScreen extends ConsumerWidget {
         ),
     };
 
+    final isBangla = activeLanguage == AppLanguage.bn;
+    final reasonText = isBangla ? result.reasonBn : result.reasonEn;
+
     return Scaffold(
       appBar: const OutpostAppBar(showBackButton: true),
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -63,6 +72,7 @@ class TriageResultScreen extends ConsumerWidget {
                 style: Theme.of(context).textTheme.headlineLarge,
               ),
               const SizedBox(height: AppSpacing.lg),
+
               // Prominent Urgency Tier Card
               Container(
                 padding: const EdgeInsets.all(AppSpacing.lg),
@@ -74,9 +84,11 @@ class TriageResultScreen extends ConsumerWidget {
                 child: Row(
                   children: [
                     Icon(
-                      level == TriageLevel.emergency
+                      result.level == TriageLevel.emergency
                           ? Icons.warning_amber_rounded
-                          : Icons.verified_user_outlined,
+                          : result.level == TriageLevel.seeClinicianToday
+                              ? Icons.schedule
+                              : Icons.verified_user_outlined,
                       size: 40,
                       color: badgeFg,
                     ),
@@ -111,7 +123,9 @@ class TriageResultScreen extends ConsumerWidget {
                   ],
                 ),
               ),
+
               const SizedBox(height: AppSpacing.lg),
+
               // Clinical rationale section
               Text(
                 strings.reasonHeading,
@@ -126,13 +140,15 @@ class TriageResultScreen extends ConsumerWidget {
                   border: Border.all(color: AppColors.outlineBorder),
                 ),
                 child: Text(
-                  'রেড-ফ্ল্যাগ পাওয়া গেছে: তীব্র শ্বাসকষ্ট ও শ্বাস নিতে সমস্যা। বিলম্ব না করে দ্রুততম সময়ে স্বাস্থ্যকেন্দ্রে নিয়ে যান।',
+                  reasonText,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: AppColors.textPrimary,
                       ),
                 ),
               ),
+
               const SizedBox(height: AppSpacing.md),
+
               // Guideline citation per rules.md rule 5
               Text(
                 strings.guidelineSourceHeading,
@@ -147,6 +163,7 @@ class TriageResultScreen extends ConsumerWidget {
                   border: Border.all(color: AppColors.outlineBorder),
                 ),
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Icon(
                       Icons.menu_book_outlined,
@@ -155,45 +172,123 @@ class TriageResultScreen extends ConsumerWidget {
                     ),
                     const SizedBox(width: AppSpacing.sm),
                     Expanded(
-                      child: Text(
-                        'WHO Pocket Book of Hospital Care for Children / IMCI Guideline 2024 (Section 3.2)',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              fontWeight: FontWeight.w500,
-                              color: AppColors.textPrimary,
-                            ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            result.guidelineSource,
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.textPrimary,
+                                ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            result.sectionCitation,
+                            style: Theme.of(context)
+                                .textTheme
+                                .labelSmall
+                                ?.copyWith(
+                                  color: AppColors.textSecondary,
+                                ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
               ),
-              const Spacer(),
-              // Emergency action button
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.emergencyRed,
+
+              // Non-medicinal home care supportive steps (if home care)
+              if (result.selfCareSteps.isNotEmpty &&
+                  result.level == TriageLevel.homeCare) ...[
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  'নিরাপদ প্রাথমিক যত্ন · Safe Self-Care Steps',
+                  style: Theme.of(context).textTheme.titleMedium,
                 ),
-                onPressed: () {
-                  // Direct call simulation (e.g. 999 or regional helpline)
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Calling National Emergency Service (999)...'),
-                      backgroundColor: AppColors.emergencyRed,
+                const SizedBox(height: AppSpacing.xs),
+                Container(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  decoration: BoxDecoration(
+                    color: AppColors.homeCareGreenLight,
+                    borderRadius: AppSpacing.cardBorderRadius,
+                    border: Border.all(
+                      color: AppColors.homeCareGreen.withValues(alpha: 0.3),
                     ),
-                  );
-                },
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.phone_in_talk, color: AppColors.surfaceWhite),
-                    const SizedBox(width: AppSpacing.sm),
-                    Text(
-                      strings.btnCallEmergency,
-                      style: const TextStyle(color: AppColors.surfaceWhite),
-                    ),
-                  ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: result.selfCareSteps
+                        .map(
+                          (step) => Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 3.0),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  '• ',
+                                  style: TextStyle(
+                                    color: AppColors.homeCareGreen,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Text(
+                                    step,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodySmall
+                                        ?.copyWith(
+                                          color: AppColors.textPrimary,
+                                        ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  ),
                 ),
-              ),
-              const SizedBox(height: AppSpacing.mdCompact),
+              ],
+
+              const SizedBox(height: AppSpacing.xl),
+
+              // Emergency action button (prominent if emergency or always available for safety)
+              if (result.level == TriageLevel.emergency) ...[
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.emergencyRed,
+                  ),
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content:
+                            Text('Calling National Emergency Service (999)...'),
+                        backgroundColor: AppColors.emergencyRed,
+                      ),
+                    );
+                  },
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.phone_in_talk,
+                          color: AppColors.surfaceWhite),
+                      const SizedBox(width: AppSpacing.sm),
+                      Text(
+                        strings.btnCallEmergency,
+                        style: const TextStyle(color: AppColors.surfaceWhite),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.mdCompact),
+              ],
+
               // Find Nearest Facility button
               OutlinedButton(
                 onPressed: () {
@@ -201,8 +296,10 @@ class TriageResultScreen extends ConsumerWidget {
                 },
                 child: Text(strings.btnFindFacility),
               ),
-              const SizedBox(height: AppSpacing.sm),
-              // Safety disclaimer notice
+
+              const SizedBox(height: AppSpacing.md),
+
+              // Safety disclaimer notice per rules.md
               Text(
                 strings.triageDisclaimer,
                 textAlign: TextAlign.center,
