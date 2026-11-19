@@ -6,12 +6,13 @@ import '../../core/constants/triage_enums.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../state/language_provider.dart';
+import '../state/triage_provider.dart';
+import '../widgets/offline_status_banner.dart';
 
-/// Initial entry screen: Splash & Language Selection.
+/// Entry screen: Welcome and Language Selection.
 ///
-/// Designed per Figma frame "01 · Welcome". Welcomes the user, explains
-/// offline functionality, and allows choosing between Bangla and English
-/// before beginning the triage intake flow.
+/// Designed per Figma frame "01 · Welcome". Presents Outpost branding,
+/// core one-line clinical purpose, offline-first assurance, and language choice.
 class SplashScreen extends ConsumerWidget {
   /// Creates the [SplashScreen].
   const SplashScreen({super.key});
@@ -19,6 +20,7 @@ class SplashScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final strings = ref.watch(stringsProvider);
+    final activeLanguage = ref.watch(languageProvider);
 
     return Scaffold(
       body: SafeArea(
@@ -26,8 +28,11 @@ class SplashScreen extends ConsumerWidget {
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
           child: Column(
             children: [
-              const SizedBox(height: AppSpacing.xxl),
-              // Welcome Hero section matching Figma 01 · Welcome
+              const SizedBox(height: AppSpacing.sm),
+              // Prominent offline-first indicator pill
+              const OfflineStatusBanner(),
+              const Spacer(),
+              // Welcome hero section matching Figma 01 · Welcome
               Container(
                 width: 92,
                 height: 92,
@@ -48,18 +53,20 @@ class SplashScreen extends ConsumerWidget {
               ),
               const SizedBox(height: AppSpacing.xs),
               Text(
-                strings.appTagline,
+                strings.appOneLineTagline,
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.headlineLarge,
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
               ),
               const SizedBox(height: AppSpacing.xs),
               Text(
-                'Care, even without a signal',
+                strings.appTagline,
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               const Spacer(),
-              // Language selection prompt
+              // Language Selection Header
               Text(
                 strings.chooseLanguageTitle,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -67,56 +74,150 @@ class SplashScreen extends ConsumerWidget {
                     ),
               ),
               const SizedBox(height: AppSpacing.mdCompact),
-              // Continue in Bangla button
-              ElevatedButton(
-                onPressed: () {
+              // Bangla Language Selection Card
+              InkWell(
+                borderRadius: AppSpacing.cardBorderRadius,
+                onTap: () {
                   ref.read(languageProvider.notifier).setLanguage(AppLanguage.bn);
-                  Navigator.of(context).pushNamed(AppRoutes.whoFor);
                 },
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      'বাংলা',
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                            color: AppColors.surfaceWhite,
-                          ),
+                child: Container(
+                  height: AppSpacing.buttonHeight,
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                  decoration: BoxDecoration(
+                    color: activeLanguage == AppLanguage.bn
+                        ? AppColors.primaryTeal
+                        : AppColors.surfaceCard,
+                    borderRadius: AppSpacing.cardBorderRadius,
+                    border: Border.all(
+                      color: activeLanguage == AppLanguage.bn
+                          ? AppColors.primaryTeal
+                          : AppColors.outlineBorder,
                     ),
-                    Text(
-                      strings.continueInBangla,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColors.surfaceWhite.withValues(alpha: 0.9),
-                          ),
-                    ),
-                  ],
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'বাংলা',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleMedium
+                                  ?.copyWith(
+                                    color: activeLanguage == AppLanguage.bn
+                                        ? AppColors.surfaceWhite
+                                        : AppColors.textPrimary,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                            ),
+                            Text(
+                              strings.continueInBangla,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .labelSmall
+                                  ?.copyWith(
+                                    color: activeLanguage == AppLanguage.bn
+                                        ? AppColors.surfaceWhite
+                                            .withValues(alpha: 0.9)
+                                        : AppColors.textSecondary,
+                                  ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (activeLanguage == AppLanguage.bn)
+                        const Icon(
+                          Icons.check_circle,
+                          color: AppColors.surfaceWhite,
+                        ),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: AppSpacing.mdCompact),
-              // Continue in English button
-              OutlinedButton(
-                style: OutlinedButton.styleFrom(
-                  backgroundColor: AppColors.primaryLight,
-                  side: BorderSide.none,
-                ),
-                onPressed: () {
+              // English Language Selection Card
+              InkWell(
+                borderRadius: AppSpacing.cardBorderRadius,
+                onTap: () {
                   ref.read(languageProvider.notifier).setLanguage(AppLanguage.en);
+                },
+                child: Container(
+                  height: AppSpacing.buttonHeight,
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                  decoration: BoxDecoration(
+                    color: activeLanguage == AppLanguage.en
+                        ? AppColors.primaryTeal
+                        : AppColors.surfaceCard,
+                    borderRadius: AppSpacing.cardBorderRadius,
+                    border: Border.all(
+                      color: activeLanguage == AppLanguage.en
+                          ? AppColors.primaryTeal
+                          : AppColors.outlineBorder,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'English',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleMedium
+                                  ?.copyWith(
+                                    color: activeLanguage == AppLanguage.en
+                                        ? AppColors.surfaceWhite
+                                        : AppColors.textPrimary,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                            ),
+                            Text(
+                              strings.continueInEnglish,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .labelSmall
+                                  ?.copyWith(
+                                    color: activeLanguage == AppLanguage.en
+                                        ? AppColors.surfaceWhite
+                                            .withValues(alpha: 0.9)
+                                        : AppColors.textSecondary,
+                                  ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (activeLanguage == AppLanguage.en)
+                        const Icon(
+                          Icons.check_circle,
+                          color: AppColors.surfaceWhite,
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              // Start Intake Button
+              ElevatedButton(
+                onPressed: () {
+                  ref.read(triageProvider.notifier).reset();
                   Navigator.of(context).pushNamed(AppRoutes.whoFor);
                 },
-                child: Column(
+                child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      'English',
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                            color: AppColors.primaryTeal,
-                          ),
+                      activeLanguage == AppLanguage.bn
+                          ? 'শুরু করুন · Start'
+                          : 'Start Intake',
                     ),
-                    Text(
-                      strings.continueInEnglish,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColors.primaryTeal,
-                          ),
-                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    const Icon(Icons.arrow_forward_rounded),
                   ],
                 ),
               ),

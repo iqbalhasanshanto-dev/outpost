@@ -6,13 +6,15 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../state/language_provider.dart';
 import '../state/triage_provider.dart';
+import '../widgets/offline_status_banner.dart';
 import '../widgets/outpost_app_bar.dart';
+import '../widgets/symptom_card.dart';
 
-/// Symptom intake and selection grid screen.
+/// Symptom intake and icon selection grid screen.
 ///
-/// Corresponds to Figma frame "03 · Symptoms". Allows clinical officers
-/// or community health workers to select primary reported symptoms either
-/// via interactive tiles or simulated voice input.
+/// Designed per Figma frame "03 · Choose a symptom". Provides an accessible,
+/// low-literacy icon grid covering the 8 primary clinical categories, with
+/// multi-select support and a transparent Phase 5 Voice indicator.
 class SymptomIntakeScreen extends ConsumerWidget {
   /// Creates the [SymptomIntakeScreen].
   const SymptomIntakeScreen({super.key});
@@ -23,19 +25,48 @@ class SymptomIntakeScreen extends ConsumerWidget {
     final triageState = ref.watch(triageProvider);
     final selectedSymptoms = triageState.selectedSymptoms;
 
+    // 8 core symptom categories matching Figma 03 · Symptoms
     final symptomsList = [
-      (id: 'fever', label: strings.symptomFever, icon: Icons.thermostat_outlined),
-      (id: 'cough', label: strings.symptomCough, icon: Icons.masks_outlined),
-      (id: 'breathing', label: strings.symptomBreathing, icon: Icons.air_outlined),
-      (id: 'chest_pain', label: strings.symptomChestPain, icon: Icons.favorite_border),
-      (id: 'stomach', label: strings.symptomStomach, icon: Icons.sentiment_dissatisfied_outlined),
-      (id: 'headache', label: strings.symptomHeadache, icon: Icons.psychology_outlined),
-      (id: 'bleeding', label: strings.symptomBleeding, icon: Icons.water_drop_outlined),
-      (id: 'diarrhea', label: strings.symptomDiarrhea, icon: Icons.waves_outlined),
-      (id: 'injury', label: strings.symptomInjury, icon: Icons.healing_outlined),
-      (id: 'rash', label: strings.symptomRash, icon: Icons.bubble_chart_outlined),
-      (id: 'dizziness', label: strings.symptomDizziness, icon: Icons.blur_on_outlined),
-      (id: 'other', label: strings.symptomOther, icon: Icons.more_horiz_outlined),
+      (
+        id: 'fever',
+        label: strings.symptomFever,
+        icon: Icons.thermostat_rounded,
+      ),
+      (
+        id: 'breathing',
+        label: strings.symptomCoughBreathing,
+        icon: Icons.air_rounded,
+      ),
+      (
+        id: 'chest_pain',
+        label: strings.symptomChestPain,
+        icon: Icons.favorite_rounded,
+      ),
+      (
+        id: 'bleeding',
+        label: strings.symptomBleeding,
+        icon: Icons.water_drop_rounded,
+      ),
+      (
+        id: 'stomach',
+        label: strings.symptomStomach,
+        icon: Icons.sentiment_dissatisfied_rounded,
+      ),
+      (
+        id: 'headache',
+        label: strings.symptomHeadache,
+        icon: Icons.psychology_rounded,
+      ),
+      (
+        id: 'diarrhea',
+        label: strings.symptomVomitingDiarrhea,
+        icon: Icons.waves_rounded,
+      ),
+      (
+        id: 'pregnancy',
+        label: strings.symptomPregnancy,
+        icon: Icons.pregnant_woman_rounded,
+      ),
     ];
 
     return Scaffold(
@@ -46,6 +77,8 @@ class SymptomIntakeScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              const SizedBox(height: AppSpacing.xs),
+              const Center(child: OfflineStatusBanner(compact: true)),
               const SizedBox(height: AppSpacing.base),
               Text(
                 strings.symptomsTitle,
@@ -57,115 +90,125 @@ class SymptomIntakeScreen extends ConsumerWidget {
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: AppSpacing.md),
-              // Voice intake simulation banner
-              Container(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                decoration: BoxDecoration(
-                  color: AppColors.primaryLight,
-                  borderRadius: AppSpacing.cardBorderRadius,
-                  border: Border.all(color: AppColors.outlineBorder),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(AppSpacing.sm),
-                      decoration: const BoxDecoration(
-                        color: AppColors.surfaceWhite,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.mic,
-                        color: AppColors.primaryTeal,
-                        size: 20,
-                      ),
+
+              // Voice (Phase 5) disabled status chip matching Figma design
+              InkWell(
+                borderRadius: AppSpacing.cardBorderRadius,
+                onTap: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(strings.voiceIntakePrompt),
+                      duration: const Duration(seconds: 2),
                     ),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(
-                      child: Text(
-                        strings.voiceIntakePrompt,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: AppColors.primaryTeal,
-                              fontWeight: FontWeight.w500,
-                            ),
+                  );
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md,
+                    vertical: AppSpacing.sm,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceCard,
+                    borderRadius: AppSpacing.cardBorderRadius,
+                    border: Border.all(color: AppColors.outlineBorder),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(AppSpacing.xs),
+                        decoration: BoxDecoration(
+                          color: AppColors.textSecondary.withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.mic_none_rounded,
+                          color: AppColors.textSecondary,
+                          size: 18,
+                        ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: Text(
+                          strings.voicePhase5Chip,
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodySmall
+                              ?.copyWith(
+                                color: AppColors.textSecondary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                        ),
+                      ),
+                      const Icon(
+                        Icons.lock_clock_outlined,
+                        size: 16,
+                        color: AppColors.textSecondary,
+                      ),
+                    ],
+                  ),
                 ),
               ),
+
               const SizedBox(height: AppSpacing.base),
-              // Symptoms Grid
+
+              // 8-item Icon-based Symptom Grid (2 columns for large, readable tap targets)
               Expanded(
                 child: GridView.builder(
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3,
+                    crossAxisCount: 2,
                     mainAxisSpacing: AppSpacing.mdCompact,
                     crossAxisSpacing: AppSpacing.mdCompact,
-                    childAspectRatio: 1.0,
+                    childAspectRatio: 1.35,
                   ),
                   itemCount: symptomsList.length,
                   itemBuilder: (context, index) {
                     final item = symptomsList[index];
                     final isSelected = selectedSymptoms.contains(item.id);
 
-                    return InkWell(
+                    return SymptomCard(
+                      id: item.id,
+                      label: item.label,
+                      icon: item.icon,
+                      isSelected: isSelected,
                       onTap: () {
-                        ref.read(triageProvider.notifier).toggleSymptom(item.id);
+                        ref
+                            .read(triageProvider.notifier)
+                            .toggleSymptom(item.id);
                       },
-                      borderRadius: AppSpacing.cardBorderRadius,
-                      child: Container(
-                        padding: const EdgeInsets.all(AppSpacing.sm),
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? AppColors.primaryLight
-                              : AppColors.surfaceCard,
-                          borderRadius: AppSpacing.cardBorderRadius,
-                          border: Border.all(
-                            color: isSelected
-                                ? AppColors.primaryTeal
-                                : AppColors.outlineBorder,
-                            width: isSelected ? 2.0 : 1.0,
-                          ),
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              item.icon,
-                              size: 26,
-                              color: isSelected
-                                  ? AppColors.primaryTeal
-                                  : AppColors.textPrimary,
-                            ),
-                            const SizedBox(height: AppSpacing.xs),
-                            Text(
-                              item.label,
-                              textAlign: TextAlign.center,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium
-                                  ?.copyWith(
-                                    fontSize: 13,
-                                    color: isSelected
-                                        ? AppColors.primaryTeal
-                                        : AppColors.textPrimary,
-                                  ),
-                            ),
-                          ],
-                        ),
-                      ),
                     );
                   },
                 ),
               ),
+
               const SizedBox(height: AppSpacing.md),
+
               // Next navigation button
               ElevatedButton(
-                onPressed: () {
-                  Navigator.of(context).pushNamed(AppRoutes.followUp);
-                },
-                child: Text(strings.btnNext),
+                onPressed: selectedSymptoms.isEmpty
+                    ? () {
+                        // Nudge user or allow continuing (which safely fails safe to clinician review)
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              ref.watch(languageProvider).code == 'bn'
+                                  ? 'অন্তত একটি লক্ষণ নির্বাচন করুন'
+                                  : 'Please select at least one symptom',
+                            ),
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                    : () {
+                        Navigator.of(context).pushNamed(AppRoutes.followUp);
+                      },
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(strings.btnNext),
+                    const SizedBox(width: AppSpacing.sm),
+                    const Icon(Icons.arrow_forward_rounded),
+                  ],
+                ),
               ),
               const SizedBox(height: AppSpacing.lg),
             ],

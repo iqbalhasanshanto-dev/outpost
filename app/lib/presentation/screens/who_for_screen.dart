@@ -7,11 +7,12 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../state/language_provider.dart';
 import '../state/triage_provider.dart';
+import '../widgets/offline_status_banner.dart';
 import '../widgets/outpost_app_bar.dart';
 
 /// Screen allowing the user to select who requires clinical assessment.
 ///
-/// Corresponds to Figma frame "02 · Who needs care". Differentiates
+/// Designed per Figma frame "02 · Who needs care". Differentiates
 /// triage protocols between general adults, pediatric IMCI (infant/child),
 /// and maternal obstetric danger signs.
 class WhoForScreen extends ConsumerWidget {
@@ -23,7 +24,7 @@ class WhoForScreen extends ConsumerWidget {
     final strings = ref.watch(stringsProvider);
     final triageState = ref.watch(triageProvider);
 
-    void selectAndNavigate(ForWhom forWhom) {
+    void selectCategory(ForWhom forWhom) {
       ref.read(triageProvider.notifier).setForWhom(forWhom);
       Navigator.of(context).pushNamed(AppRoutes.symptomIntake);
     }
@@ -36,6 +37,8 @@ class WhoForScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              const SizedBox(height: AppSpacing.xs),
+              const Center(child: OfflineStatusBanner(compact: true)),
               const SizedBox(height: AppSpacing.base),
               // Page Heading
               Text(
@@ -48,33 +51,38 @@ class WhoForScreen extends ConsumerWidget {
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: AppSpacing.lg),
+
               // Option 1: Myself
               _WhoForCard(
-                icon: Icons.person_outline,
+                icon: Icons.person_outline_rounded,
                 title: strings.forMyself,
-                subtitle: 'Myself',
+                subtitle: 'Myself (Adult)',
                 isSelected: triageState.forWhom == ForWhom.myself,
-                onTap: () => selectAndNavigate(ForWhom.myself),
+                onTap: () => selectCategory(ForWhom.myself),
               ),
               const SizedBox(height: AppSpacing.md),
+
               // Option 2: Child (IMCI)
               _WhoForCard(
-                icon: Icons.child_care_outlined,
+                icon: Icons.child_care_rounded,
                 title: strings.forChild,
-                subtitle: 'My child',
+                subtitle: 'My child (Infant or under 5)',
                 isSelected: triageState.forWhom == ForWhom.child,
-                onTap: () => selectAndNavigate(ForWhom.child),
+                onTap: () => selectCategory(ForWhom.child),
               ),
               const SizedBox(height: AppSpacing.md),
-              // Option 3: Pregnant woman (Maternal health)
+
+              // Option 3: Someone Pregnant (Maternal health)
               _WhoForCard(
-                icon: Icons.pregnant_woman_outlined,
+                icon: Icons.pregnant_woman_rounded,
                 title: strings.forPregnant,
-                subtitle: 'Pregnant woman',
+                subtitle: 'Someone pregnant (Maternal signs)',
                 isSelected: triageState.forWhom == ForWhom.pregnant,
-                onTap: () => selectAndNavigate(ForWhom.pregnant),
+                onTap: () => selectCategory(ForWhom.pregnant),
               ),
+
               const Spacer(),
+
               // Privacy reassurance banner
               Container(
                 padding: const EdgeInsets.all(AppSpacing.md),
@@ -82,20 +90,36 @@ class WhoForScreen extends ConsumerWidget {
                   color: AppColors.primaryLight,
                   borderRadius: AppSpacing.cardBorderRadius,
                 ),
-                child: Column(
+                child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      strings.privacyReassurance,
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: AppColors.primaryTeal,
-                            fontWeight: FontWeight.w600,
-                          ),
+                    const Icon(
+                      Icons.shield_outlined,
+                      size: 22,
+                      color: AppColors.primaryTeal,
                     ),
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      strings.privacySub,
-                      style: Theme.of(context).textTheme.bodySmall,
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            strings.privacyReassurance,
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(
+                                  color: AppColors.primaryTeal,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            strings.privacySub,
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -109,7 +133,7 @@ class WhoForScreen extends ConsumerWidget {
   }
 }
 
-/// Card component representing an individual [ForWhom] selection option.
+/// Large accessible option card for [ForWhom] selection.
 class _WhoForCard extends StatelessWidget {
   const _WhoForCard({
     required this.icon,
@@ -130,7 +154,8 @@ class _WhoForCard extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       borderRadius: AppSpacing.cardBorderRadius,
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
         height: AppSpacing.cardHeight,
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.lg,
@@ -146,10 +171,19 @@ class _WhoForCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(
-              icon,
-              size: 32,
-              color: isSelected ? AppColors.primaryTeal : AppColors.textPrimary,
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.sm),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? AppColors.surfaceWhite
+                    : AppColors.primaryLight,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                icon,
+                size: 32,
+                color: AppColors.primaryTeal,
+              ),
             ),
             const SizedBox(width: AppSpacing.base),
             Expanded(
@@ -161,18 +195,25 @@ class _WhoForCard extends StatelessWidget {
                     title,
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           color: AppColors.textPrimary,
+                          fontWeight: FontWeight.bold,
                         ),
                   ),
+                  const SizedBox(height: 2),
                   Text(
                     subtitle,
-                    style: Theme.of(context).textTheme.bodyMedium,
+                    style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],
               ),
             ),
-            const Icon(
-              Icons.chevron_right,
-              color: AppColors.textSecondary,
+            Icon(
+              isSelected
+                  ? Icons.check_circle_rounded
+                  : Icons.chevron_right_rounded,
+              color: isSelected
+                  ? AppColors.primaryTeal
+                  : AppColors.textSecondary,
+              size: 24,
             ),
           ],
         ),

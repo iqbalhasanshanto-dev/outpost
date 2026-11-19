@@ -6,19 +6,104 @@ import '../../core/constants/triage_enums.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../domain/triage/triage_engine.dart';
+import '../../l10n/app_strings.dart';
 import '../state/language_provider.dart';
 import '../state/triage_provider.dart';
+import '../widgets/offline_status_banner.dart';
 import '../widgets/outpost_app_bar.dart';
+import '../widgets/triage_badge.dart';
 
 /// Screen presenting the clinical urgency classification and next steps.
 ///
-/// Implements safety boundaries per rules.md:
-/// - Displays one of three discrete triage tiers ([TriageLevel]).
-/// - Shows guideline citation and deterministic reasoning.
-/// - Includes mandatory disclaimer and direct "Call emergency" action.
+/// Implements Figma frames 07 (Emergency), 08 (Clinician today), 09 (Home care),
+/// and 17 (Emergency 999 call sheet). Features:
+/// - Distinct [TriageBadge] header.
+/// - Plain-language clinical rationale.
+/// - WHO guideline citation card (source + specific section).
+/// - Non-medicinal home care supportive steps (if home care).
+/// - Prominent Call Emergency (999) action + Find Nearest Clinic action.
+/// - "Start New Check" demo reset action.
 class TriageResultScreen extends ConsumerWidget {
   /// Creates the [TriageResultScreen].
   const TriageResultScreen({super.key});
+
+  void _showEmergencyCallSheet(BuildContext context, AppStrings strings) {
+    showModalBottomSheet<void>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppSpacing.radiusCard),
+        ),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.xl),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(AppSpacing.sm),
+                      decoration: const BoxDecoration(
+                        color: AppColors.emergencyRedLight,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.phone_in_talk_rounded,
+                        color: AppColors.emergencyRed,
+                        size: 26,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: Text(
+                        strings.emergencyCallSheetTitle,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  strings.emergencyCallSheetNotice,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                const SizedBox(height: AppSpacing.xl),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.emergencyRed,
+                  ),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Simulated opening tel:999 in device dialer'),
+                        backgroundColor: AppColors.emergencyRed,
+                      ),
+                    );
+                  },
+                  child: Text(
+                    strings.emergencyCallConfirm,
+                    style: const TextStyle(color: AppColors.surfaceWhite),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                OutlinedButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text(strings.emergencyCallDismiss),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -34,27 +119,6 @@ class TriageResultScreen extends ConsumerWidget {
           answers: triageState.followUpAnswers,
         );
 
-    final (badgeBg, badgeFg, levelTitle, levelSub) = switch (result.level) {
-      TriageLevel.emergency => (
-          AppColors.emergencyRedLight,
-          AppColors.emergencyRed,
-          strings.triageEmergency,
-          'Immediate medical attention required',
-        ),
-      TriageLevel.seeClinicianToday => (
-          AppColors.clinicianTodayAmberLight,
-          AppColors.clinicianTodayAmber,
-          strings.triageSeeClinicianToday,
-          'Clinical assessment recommended within 24 hours',
-        ),
-      TriageLevel.homeCare => (
-          AppColors.homeCareGreenLight,
-          AppColors.homeCareGreen,
-          strings.triageHomeCare,
-          'Supportive care and monitoring safe at home',
-        ),
-    };
-
     final isBangla = activeLanguage == AppLanguage.bn;
     final reasonText = isBangla ? result.reasonBn : result.reasonEn;
 
@@ -66,70 +130,21 @@ class TriageResultScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              const SizedBox(height: AppSpacing.xs),
+              const Center(child: OfflineStatusBanner(compact: true)),
               const SizedBox(height: AppSpacing.base),
-              Text(
-                strings.triageResultTitle,
-                style: Theme.of(context).textTheme.headlineLarge,
-              ),
-              const SizedBox(height: AppSpacing.lg),
 
-              // Prominent Urgency Tier Card
-              Container(
-                padding: const EdgeInsets.all(AppSpacing.lg),
-                decoration: BoxDecoration(
-                  color: badgeBg,
-                  borderRadius: AppSpacing.cardBorderRadius,
-                  border: Border.all(color: badgeFg.withValues(alpha: 0.3)),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      result.level == TriageLevel.emergency
-                          ? Icons.warning_amber_rounded
-                          : result.level == TriageLevel.seeClinicianToday
-                              ? Icons.schedule
-                              : Icons.verified_user_outlined,
-                      size: 40,
-                      color: badgeFg,
-                    ),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            levelTitle,
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleLarge
-                                ?.copyWith(
-                                  color: badgeFg,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                          ),
-                          const SizedBox(height: AppSpacing.xs),
-                          Text(
-                            levelSub,
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodySmall
-                                ?.copyWith(
-                                  color: badgeFg,
-                                ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              // Urgency Badge Header Card (Figma 07, 08, 09)
+              TriageBadge(level: result.level),
 
               const SizedBox(height: AppSpacing.lg),
 
-              // Clinical rationale section
+              // Clinical Rationale Section
               Text(
                 strings.reasonHeading,
-                style: Theme.of(context).textTheme.titleMedium,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
               ),
               const SizedBox(height: AppSpacing.xs),
               Container(
@@ -143,16 +158,19 @@ class TriageResultScreen extends ConsumerWidget {
                   reasonText,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: AppColors.textPrimary,
+                        height: 1.4,
                       ),
                 ),
               ),
 
               const SizedBox(height: AppSpacing.md),
 
-              // Guideline citation per rules.md rule 5
+              // WHO Guideline Citation Card (per rules.md safety boundary 5)
               Text(
                 strings.guidelineSourceHeading,
-                style: Theme.of(context).textTheme.titleMedium,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
               ),
               const SizedBox(height: AppSpacing.xs),
               Container(
@@ -166,8 +184,8 @@ class TriageResultScreen extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Icon(
-                      Icons.menu_book_outlined,
-                      size: 20,
+                      Icons.menu_book_rounded,
+                      size: 22,
                       color: AppColors.primaryTeal,
                     ),
                     const SizedBox(width: AppSpacing.sm),
@@ -185,7 +203,7 @@ class TriageResultScreen extends ConsumerWidget {
                                   color: AppColors.textPrimary,
                                 ),
                           ),
-                          const SizedBox(height: 2),
+                          const SizedBox(height: 3),
                           Text(
                             result.sectionCitation,
                             style: Theme.of(context)
@@ -202,13 +220,14 @@ class TriageResultScreen extends ConsumerWidget {
                 ),
               ),
 
-              // Non-medicinal home care supportive steps (if home care)
-              if (result.selfCareSteps.isNotEmpty &&
-                  result.level == TriageLevel.homeCare) ...[
+              // Safe Home Care Guidance (if Home Care)
+              if (result.level == TriageLevel.homeCare) ...[
                 const SizedBox(height: AppSpacing.md),
                 Text(
-                  'নিরাপদ প্রাথমিক যত্ন · Safe Self-Care Steps',
-                  style: Theme.of(context).textTheme.titleMedium,
+                  strings.selfCareStepsHeading,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 Container(
@@ -222,88 +241,133 @@ class TriageResultScreen extends ConsumerWidget {
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: result.selfCareSteps
-                        .map(
-                          (step) => Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 3.0),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  '• ',
-                                  style: TextStyle(
-                                    color: AppColors.homeCareGreen,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                Expanded(
-                                  child: Text(
-                                    step,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .bodySmall
-                                        ?.copyWith(
-                                          color: AppColors.textPrimary,
-                                        ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        )
-                        .toList(),
-                  ),
-                ),
-              ],
-
-              const SizedBox(height: AppSpacing.xl),
-
-              // Emergency action button (prominent if emergency or always available for safety)
-              if (result.level == TriageLevel.emergency) ...[
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.emergencyRed,
-                  ),
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content:
-                            Text('Calling National Emergency Service (999)...'),
-                        backgroundColor: AppColors.emergencyRed,
-                      ),
-                    );
-                  },
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.phone_in_talk,
-                          color: AppColors.surfaceWhite),
-                      const SizedBox(width: AppSpacing.sm),
+                      ...result.selfCareSteps.map(
+                        (step) => Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 3.0),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                '• ',
+                                style: TextStyle(
+                                  color: AppColors.homeCareGreen,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Expanded(
+                                child: Text(
+                                  step,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.copyWith(
+                                        color: AppColors.textPrimary,
+                                      ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const Divider(height: 16),
                       Text(
-                        strings.btnCallEmergency,
-                        style: const TextStyle(color: AppColors.surfaceWhite),
+                        strings.warningSignsWatchHeading,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.homeCareGreen,
+                            ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        isBangla
+                            ? 'তীব্র শ্বাসকষ্ট, খাওয়ায় অক্ষমতা বা অতিরিক্ত দুর্বলতা দেখা দিলে সাথে সাথে হাসপাতালে যান।'
+                            : 'If breathing difficulty, inability to drink, or severe weakness develops, seek emergency care immediately.',
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              color: AppColors.textPrimary,
+                            ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: AppSpacing.mdCompact),
               ],
 
-              // Find Nearest Facility button
+              const SizedBox(height: AppSpacing.lg),
+
+              // Emergency 999 Button (Prominent for Emergency, also accessible for others)
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.emergencyRed,
+                ),
+                onPressed: () => _showEmergencyCallSheet(context, strings),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.phone_in_talk_rounded,
+                      color: AppColors.surfaceWhite,
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Text(
+                      strings.btnCallEmergency,
+                      style: const TextStyle(
+                        color: AppColors.surfaceWhite,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: AppSpacing.sm),
+
+              // Find Nearest Clinic Button
               OutlinedButton(
                 onPressed: () {
                   Navigator.of(context).pushNamed(AppRoutes.nearestFacility);
                 },
-                child: Text(strings.btnFindFacility),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.local_hospital_outlined,
+                      color: AppColors.primaryTeal,
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Text(strings.btnFindFacility),
+                  ],
+                ),
               ),
 
-              const SizedBox(height: AppSpacing.md),
+              const SizedBox(height: AppSpacing.sm),
 
-              // Safety disclaimer notice per rules.md
+              // Reset / Start New Check Button
+              TextButton(
+                onPressed: () {
+                  ref.read(triageProvider.notifier).reset();
+                  Navigator.of(context).pushNamedAndRemoveUntil(
+                    AppRoutes.splash,
+                    (route) => false,
+                  );
+                },
+                child: Text(
+                  strings.startNewCheck,
+                  style: const TextStyle(
+                    color: AppColors.primaryTeal,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: AppSpacing.xs),
+
+              // Safety Disclaimer per rules.md
               Text(
                 strings.triageDisclaimer,
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.labelSmall,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
               ),
               const SizedBox(height: AppSpacing.base),
             ],
