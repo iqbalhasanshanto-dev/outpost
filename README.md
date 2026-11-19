@@ -1,29 +1,33 @@
 # Outpost (আউটপোস্ট)
 
-> **HealthSphere AI — CareAnywhere Preliminary Submission**  
-> **One-line Pitch:** An offline-first, bilingual (Bangla/English) triage application that determines clinical urgency and next steps—never diagnosis—for rural and low-bandwidth communities.
+### HealthSphere AI — CareAnywhere Preliminary Submission
+
+> [!IMPORTANT]
+> **Preliminary Prototype Notice:** This repository currently implements the **Phase 1 Preliminary Prototype**—a working, 100% offline-operable mobile application built with Flutter, driven by deterministic red-flag rules and local mock facility data. All outputs and protocols are **vignette-tested prototypes, not clinically validated diagnostic systems**.
+
+**One-line Pitch:** An offline-first, bilingual (Bangla/English) triage application that determines clinical urgency and next steps—never diagnosis—for rural and low-bandwidth communities.
 
 ---
 
 ## 1. Problem & Target Users
 
-In rural Bangladesh and underserved low-bandwidth regions worldwide, healthcare facilities are often kilometers away over challenging terrain. When illness strikes, patients and caregivers face a critical question: *"Is this an emergency requiring immediate hospital travel, or can it wait?"*
+In rural Bangladesh and remote, low-bandwidth communities worldwide, health centers are often hours away over difficult terrain. When illness strikes, patients and caregivers face an agonizing question: *"Is this an emergency requiring immediate hospital travel, or can it safely be managed at home?"*
 
 - **The Problem:**
-  - **Connectivity gaps:** Commercial symptom checkers require constant internet access, leaving rural populations stranded during network outages.
-  - **Language & literacy barriers:** Most digital health tools are English-centric and text-heavy, failing low-literacy rural families.
-  - **Diagnostic overreach:** AI tools that attempt to diagnose or prescribe create severe clinical and liability risks in field settings.
-  - **Delayed emergency care:** Treatable pediatric (IMCI) and maternal complications frequently progress to fatal stages before families recognize danger signs.
+  - **Connectivity gaps:** Mainstream symptom checkers demand continuous high-speed internet, leaving rural populations stranded during frequent blackouts and network outages.
+  - **Language & literacy barriers:** Digital health tools are predominantly English-centric and text-heavy, alienating low-literacy rural families.
+  - **Diagnostic overreach:** Systems that attempt to diagnose illnesses or recommend medications introduce hazardous clinical risks in unmonitored field settings.
+  - **Delayed emergency escalation:** Treatable childhood illnesses (IMCI) and maternal obstetric complications frequently turn fatal because families fail to recognize critical danger signs in time.
 
 - **Target Users:**
-  1. **Rural Caregivers & Patients:** Need simple Bangla/English UI, low-literacy visual icons, instant offline urgency determinations, and nearby facility guidance.
-  2. **Parents & Expectant Mothers:** Need prioritized detection for pediatric IMCI general danger signs and obstetric red flags.
-  3. **Community Health Workers (CHWs):** Need a fast, dependable protocol-driven triage guide in Airplane Mode.
-  4. **Reviewing Clinicians:** Need a web-based queue to audit, confirm, or override flagged field cases.
+  1. **Rural Caregivers & Patients:** Need a visual, icon-driven Bangla/English interface providing instant offline urgency decisions and facility directions.
+  2. **Parents & Expectant Mothers:** Need prioritized screening for pediatric IMCI general danger signs and maternal obstetric red flags.
+  3. **Community Health Workers (CHWs):** Need a fast, protocol-guided bedside triage tool that functions reliably in Airplane Mode.
+  4. **Reviewing Clinicians:** Need a web-based flagged case queue to audit, confirm, or override triage outcomes when connectivity is available.
 
 ---
 
-## 2. Solution & Safety Architecture
+## 2. Safety Architecture & Decision Pipeline
 
 Outpost enforces a strict, layered clinical decision pipeline where deterministic safety rules take absolute precedence over probabilistic models.
 
@@ -67,8 +71,8 @@ Outpost enforces a strict, layered clinical decision pipeline where deterministi
 
 ### The Three Urgency Tiers
 1. **Emergency (জরুরি):** Critical danger sign detected. Urgent hospital referral with one-tap national emergency dispatch (999).
-2. **See a Clinician Today (আজই ডাক্তার দেখান):** Moderate, worsening, or prolonged (3+ days) symptoms, or clinical uncertainty. Directs to local Upazila Health Complex or Community Clinic within 24 hours.
-3. **Home Care (বাড়িতে যত্ন):** Mild, short-duration symptoms with zero danger signs. Provides safe, non-medicinal supportive guidance (rest, safe hydration, warning signs to watch).
+2. **See a Clinician Today (আজই ডাক্তার দেখান):** Moderate, worsening, or prolonged (3+ days) symptoms, or clinical uncertainty. Directs to a local Upazila Health Complex or Community Clinic within 24 hours.
+3. **Home Care (বাড়িতে যত্ন):** Mild, short-duration symptoms with zero danger signs. Provides safe, non-medicinal supportive guidance (rest, safe hydration, infant feeding continuation, warning signs to watch).
 
 ---
 
@@ -82,13 +86,40 @@ To protect patient safety in real-world deployment, Outpost adheres to non-negot
 | **Medication Safety** | Non-pharmacological self-care (fluids, rest) | **Never prescribes, names, or doses medications** |
 | **Rule Primacy** | Deterministic red flags run first and lock to Emergency | **No AI or algorithm can downgrade a red flag** |
 | **Uncertainty Fallback** | Unclear/empty inputs fail safe to *See a Clinician Today* | **Never defaults to Home Care on ambiguity** |
-| **Evidence Grounding** | Every result shows an exact WHO guideline citation | **No fabricated medical explanations** |
+| **Evidence Grounding** | Every result shows an exact WHO guideline citation | **No hallucinated or ungrounded medical guidance** |
 | **Clinical Claims** | Described strictly as **vignette-tested prototype** | **Never claims clinical validation** |
 | **Device Resources** | Lightweight local Dart rule execution; zero heavy models | **No on-device LLM battery or thermal drain** |
 
 ---
 
-## 4. Tech Stack & Repository Structure
+## 4. What's Working Today (Phase 1 Prototype)
+
+The preliminary prototype in `app/` is 100% complete, fully offline-functional, and test-verified:
+- **Bilingual Bangla/English UI:** Reactive, instantaneous switching via Riverpod with zero hardcoded user-facing strings across all widgets.
+- **6 Interactive Screens:** Welcome/Language (`SplashScreen`), Patient Category (`WhoForScreen`), Symptom Picker (`SymptomIntakeScreen`), 3-step Guided Follow-up (`FollowUpScreen`), Urgency Outcome (`TriageResultScreen`), and Nearby Facilities (`NearestFacilityScreen`).
+- **9 Deterministic Red-Flag Rules:** Hardcoded danger signs covering adult cardiovascular/respiratory emergencies, pediatric IMCI danger signs (unable to drink, vomiting everything), and maternal obstetric red flags (severe abdominal pain, bleeding, pre-eclampsia headache/vision changes).
+- **WHO Protocol Grounding:** Specific document and section citations (WHO IMCI, ETAT, MCPC, PEN) attached to every triage decision.
+- **Mock Facility Directory:** 5 realistic healthcare facilities for Manda Upazila (Naogaon district) sorted by distance with transit times and phone contacts.
+- **Verification:** 18 automated unit and widget tests passing with 0 analyzer issues (`flutter analyze` clean).
+
+---
+
+## 5. Planned Development Roadmap (Phases 2 – 7)
+
+Following the preliminary submission, Outpost will progress across the remaining phases detailed in `phases.md`:
+
+| Phase | Milestone | Key Deliverables & Architecture |
+|---|---|---|
+| **Phase 2** | **Offline Triage Core** | • Local SQLite database via **Drift**<br>• Real WHO IMCI and Primary Care guideline chunks indexed with **SQLite FTS5**<br>• Dynamic follow-up flow with uncertainty escalation<br>• On-device patient case history |
+| **Phase 3** | **Backend & Store-and-Forward Sync** | • Lightweight **FastAPI + SQLite** backend<br>• `/sync` and `/cases` endpoints<br>• Background offline queue with **WorkManager** and **connectivity_plus**<br>• Manual "Sync Now" button for instant synchronization |
+| **Phase 4** | **Clinician Review Portal (Web)** | • **Next.js** clinician portal with secure clinician authentication<br>• Flagged Case Queue for emergency & escalated cases<br>• Confirm / Override actions with clinician notes syncing back to patient devices |
+| **Phase 5** | **Bangla Voice & Retrieval-Constrained AI** | • On-device Android speech recognizer with visual picker fallback<br>• Online **Whisper** transcription upgrade<br>• **FAISS RAG + LLM** plain-language Bangla explanations strictly constrained to retrieved WHO passages (no ungrounded generation) |
+| **Phase 6** | **Real Facilities & Offline Maps** | • Bundled OpenStreetMap clinic and pharmacy data for the target district<br>• **flutter_map** integration (no paid or key-gated map APIs)<br>• Offline Haversine distance and travel-time estimates |
+| **Phase 7** | **Vignette Evaluation & Final Polish** | • Benchmark against **40–50 clinical vignettes** with gold-standard urgency labels<br>• Measure accuracy, under-triage rate, offline completion rate, and time-to-result<br>• Field UI polish and clinical stakeholder review |
+
+---
+
+## 6. Tech Stack & Repository Structure
 
 ```
 outpost/
@@ -106,27 +137,13 @@ outpost/
 └── data/                 # Bundled offline OpenStreetMap & WHO guideline passages
 ```
 
-- **Mobile App:** Flutter 3, Dart 3, Material 3, Noto Sans Bengali typography.
+- **Mobile Framework:** Flutter 3, Dart 3, Material 3, Noto Sans Bengali typography.
 - **State Management:** Riverpod 3 (`languageProvider`, `triageProvider`).
 - **Offline Storage:** Bundled assets & local cache; zero external cloud dependencies for Phase 1 triage.
 
 ---
 
-## 5. Current Prototype Status (Phase 1)
-
-Phase 1 is complete, providing a 100% offline-operable prototype:
-- [x] Initialized Flutter architecture matching `Architecture.md` specifications.
-- [x] Extracted exact Figma design tokens, colors (`#006B60` Teal, `#B3261E` Red, `#825500` Amber, `#226C39` Green), and typography into `AppColors` and `AppTheme`.
-- [x] Built the 9 hardcoded deterministic red-flag rules covering adult, child (IMCI), and maternal obstetric danger signs.
-- [x] Implemented `TriageEngine` with 3-tier classification, WHO citations, non-medicinal supportive home-care steps, and fail-safe uncertainty escalation.
-- [x] Created all Phase 1 screens (`SplashScreen`, `WhoForScreen`, `SymptomIntakeScreen`, `FollowUpScreen`, `TriageResultScreen`, `NearestFacilityScreen`).
-- [x] Built reusable components: `OfflineStatusBanner`, `SymptomCard`, and `TriageBadge`.
-- [x] Complete bilingual localization in `l10n/` with reactive instant switching (zero hardcoded strings).
-- [x] 18 automated unit and widget tests passing with 0 analyzer issues.
-
----
-
-## 6. How to Run `app/`
+## 7. How to Run `app/`
 
 ### Prerequisites
 - [Flutter SDK](https://flutter.dev/docs/get-started/install) (v3.19+ / Dart 3.3+)
@@ -150,7 +167,7 @@ flutter run
 
 ---
 
-## 7. 60-Second Demo Walkthrough for Judges
+## 8. 60-Second Demo Walkthrough for Judges
 
 Try these two representative test paths to observe Outpost's safety architecture in action:
 
